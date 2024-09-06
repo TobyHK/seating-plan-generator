@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seating Plan Generator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+        #container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="number"], input[type="text"], button {
+            width: calc(100% - 12px);
+            padding: 6px;
+            margin-bottom: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+            width: 100%;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            width: 40px;
+            height: 40px;
+        }
+        .tall {
+            background-color: #e6f2ff;
+        }
+        .medium {
+            background-color: #ffffcc;
+        }
+        .short {
+            background-color: #ffffe6;
+        }
+        /* Add a gap between every 2 columns */
+        td:nth-child(2n):not(:last-child) {
+            border-right: 5mm double #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Seating Plan Generator</h1>
+    <div class="input-group">
+        <label for="rows">Number of Rows:</label>
+        <input type="number" id="rows" value="4">
+    </div>
+    <div class="input-group">
+        <label for="cols">Number of Columns:</label>
+        <input type="number" id="cols" value="8">
+    </div>
+    <div class="input-group">
+        <label for="students">Total Number of Students:</label>
+        <input type="number" id="students" value="32">
+    </div>
+    <div class="input-group">
+        <label for="tall">Tall Students (Class Numbers separated by commas):</label>
+        <input type="text" id="tall" value="">
+    </div>
+    <div class="input-group">
+        <label for="medium">Medium Height Students (Class Numbers separated by commas):</label>
+        <input type="text" id="medium" value="">
+    </div>
+    <div class="input-group">
+        <label for="short">Short Students (Class Numbers separated by commas):</label>
+        <input type="text" id="short" value="">
+    </div>
+    <div class="input-group">
+        <label for="restrictions">Separate Students (comma-separated pairs, e.g., 1-2,3-5):</label>
+        <input type="text" id="restrictions" value="">
+    </div>
+<label for="together">Pair Up Students (comma-separated pairs, e.g., 1-2,3-4):</label>
+<input type="text" id="together" value="">
+</div>
+
+    <button onclick="generatePlan()">Generate Seating Plan</button>
+    <button onclick="resetForm()">Reset</button>
+    <div id="container"></div>
+
+    <script>
+        function generatePlan() {
+            const rows = parseInt(document.getElementById('rows').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            const totalStudents = parseInt(document.getElementById('students').value);
+
+            const tallStudents = document.getElementById('tall').value
+                .split(',')
+                .map(Number)
+                .filter(num => !isNaN(num));
+
+            const mediumStudents = document.getElementById('medium').value
+                .split(',')
+                .map(Number)
+                .filter(num => !isNaN(num));
+
+            const shortStudents = document.getElementById('short').value
+                .split(',')
+                .map(Number)
+                .filter(num => !isNaN(num));
+
+            const restrictions = document.getElementById('restrictions').value
+                .split(',')
+                .map(pair => pair.trim().split('-').map(Number))
+                .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
+
+            if (totalStudents > rows * cols) {
+                alert('Total students exceed the classroom capacity.');
+                return;
+            }
+
+            if (tallStudents.length + mediumStudents.length + shortStudents.length !== totalStudents) {
+                alert('Number of students in height categories does not match total students.');
+                return;
+            }
+
+            const plan = [];
+            let availableSeats = [];
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    availableSeats.push([i, j]);
+                }
+            }
+
+            const assignedSeats = {};
+
+            const shuffleArray = (array) => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            };
+
+            function assignStudent(student, height) {
+                const frontHalfRows = Math.ceil(rows / 2);
+                let attempts = availableSeats.length;
+
+                while (attempts > 0) {
+                    const randomIndex = Math.floor(Math.random() * availableSeats.length);
+                    const [row, col] = availableSeats[randomIndex];
+
+                    if (
+                        (height === 'tall' && row < frontHalfRows) ||
+                        (height === 'short' && row >= frontHalfRows) ||
+                        height === 'medium'
+                    ) {
+                        if (isSeatValid(student, row, col, assignedSeats, restrictions)) {
+                            assignedSeats[student] = [row, col];
+                            availableSeats.splice(randomIndex, 1);
+                            return true;
+                        }
+                    }
+                    attempts--;
+                }
+
+                if (restrictions.length > 0) {
+                    restrictions.pop();
+                    return assignStudent(student, height);
+                }
+
+                return false;
+            }
+
+            const studentsToAssign = shuffleArray([
+                ...tallStudents.map(s => [s, 'tall']),
+                ...mediumStudents.map(s => [s, 'medium']),
+                ...shortStudents.map(s => [s, 'short'])
+            ]);
+
+            for (const [student, height] of studentsToAssign) {
+                if (!assignStudent(student, height)) {
+                    alert(`Unable to place all students with the given restrictions.`);
+                    return;
+                }
+            }
+
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                for (let j = 0; j < cols; j++) {
+                    row.push('<td></td>');
+                }
+                plan.push(row);
+            }
+
+            for (const student in assignedSeats) {
+                const [row, col] = assignedSeats[student];
+                let heightClass = '';
+
+                if (tallStudents.includes(parseInt(student))) {
+                    heightClass = 'tall';
+                } else if (mediumStudents.includes(parseInt(student))) {
+                    heightClass = 'medium';
+                } else {
+                    heightClass = 'short';
+                }
+
+                plan[row][col] = `<td class="${heightClass}">${student}</td>`;
+            }
+
+            const container = document.getElementById('container');
+            container.innerHTML = '';
+
+            const table = document.createElement('table');
+
+            plan.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => tr.innerHTML += cell);
+                table.appendChild(tr);
+            });
+
+            container.appendChild(table);
+        }
+
+        function isSeatValid(student, row, col, assignedSeats, restrictions) {
+            for (const [restricted1, restricted2] of restrictions) {
+                if (
+                    (student === restricted1 && assignedSeats[restricted2] && areSeatsNear(row, col, assignedSeats[restricted2][0], assignedSeats[restricted2][1])) ||
+                    (student === restricted2 && assignedSeats[restricted1] && areSeatsNear(row, col, assignedSeats[restricted1][0], assignedSeats[restricted1][1]))
+                ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function areSeatsNear(row1, col1, row2, col2) {
+            const rowDiff = Math.abs(row1 - row2);
+            const colDiff = Math.abs(col1 - col2);
+            return (rowDiff <= 1 && colDiff <= 1);
+        }
+
+        function resetForm() {
+            document.getElementById('rows').value = 4;
+            document.getElementById('cols').value = 8;
+            document.getElementById('students').value = 32;
+            document.getElementById('tall').value = '';
+            document.getElementById('medium').value = '';
+            document.getElementById('short').value = '';
+            document.getElementById('restrictions').value = '';
+            document.getElementById('container').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
