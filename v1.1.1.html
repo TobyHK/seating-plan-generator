@@ -1,0 +1,395 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seating Plan Generator</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/IHToby/seating-plan-generator/a7cd2df33385fe2229e5883c6aef22978bc6a476/Seating%20Plan%20Generator%20Icon.png" type="image/png">
+    <style>
+        body {
+            font-family: chalkboard;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            max-width: 2000px;
+            margin: auto;
+            width: 100%;
+            background-color: #d4edda;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        h1 {
+            font-family: chalkduster;
+            margin: 0;
+        }
+        h2 {
+            font-size: 30px; 
+            font-family: 'Chalkduster', chalkboard;
+            margin: 0;
+        }
+        #input-container {
+            flex: 1;
+            margin-right: 20px;
+        }
+        #output-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-left: 150px;
+            margin-right: 150px;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="number"], input[type="text"], button {
+            width: calc(100% - 12px);
+            padding: 6px;
+            margin-bottom: 10px;
+            font-family: chalkboard;
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+            width: 100%;
+        }
+        tr {
+            height: 50px; /* Height for each row */
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            width: 40px;
+            height: 40px;
+        }
+        .tall {
+            background-color: #e6f2ff;
+        }
+        .medium {
+            background-color: #ffffcc;
+        }
+        .short {
+            background-color: #ffe6e6;
+        }
+        td:nth-child(2n):not(:last-child) {
+            border-right: 5mm double #ddd;
+        }
+        #blackboard {
+            display: none;
+            background-color: #4A604F;
+            color: white;
+            font-family: chalkboard;
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        #container {
+            width: 100%;
+            max-width: 100%;
+        }
+        #export-button {
+            margin-top: 20px; /* Space above the export button */
+            width: calc(75% - 12px); 
+        }
+        #reset-button {
+            width: calc(100% - 12px); /* Same width as input fields */
+        }
+    </style>
+</head>
+<body>
+    <div id="input-container">
+        <div class="header">
+            <h1>
+                <img src="https://raw.githubusercontent.com/IHToby/seating-plan-generator/a7cd2df33385fe2229e5883c6aef22978bc6a476/Seating%20Plan%20Generator%20Icon.png" 
+                     style="height: 120px; width: auto; margin-right: 10px;">
+            </h1>
+            <h2>Seating Plan Generator</h2>
+        </div>
+        <div class="input-group">
+            <label for="rows">Number of Rows:</label>
+            <input type="number" id="rows" value="4">
+        </div>
+        <div class="input-group">
+            <label for="cols">Number of Columns:</label>
+            <input type="number" id="cols" value="8">
+        </div>
+        <div class="input-group">
+            <label for="students">Total Number of Students:</label>
+            <input type="number" id="students" value="32">
+        </div>
+        <div class="input-group">
+            <label for="tall">Tall Students (class no. separated by ,):</label>
+            <input type="text" id="tall" value="">
+        </div>
+        <div class="input-group">
+            <label for="medium">Medium Height Students (class no. separated by ,):</label>
+            <input type="text" id="medium" value="">
+        </div>
+        <div class="input-group">
+            <label for="short">Short Students (class no. separated by ,):</label>
+            <input type="text" id="short" value="">
+        </div>
+        <div class="input-group">
+            <label for="restrictions">Separate Students (comma-separated pairs, e.g., 1-2,5-6):</label>
+            <input type="text" id="restrictions" value="">
+        </div>
+        <div class="input-group">
+            <label for="together">Pair Up Students (comma-separated pairs, e.g., 3-4,7-8):</label>
+            <input type="text" id="together" value="">
+        </div>
+        <button onclick="generatePlan()">Generate Seating Plan</button>
+        <button id="reset-button" onclick="resetForm()">Reset</button>
+    </div>
+
+    <div id="output-container">
+        <div id="container"></div>
+        <div id="blackboard">Blackboard</div>
+        <button id="export-button" onclick="exportToWord()" style="display: none;">Export as Microsoft Word Document</button>
+    </div>
+
+    <script>
+        function generatePlan() {
+            const rows = parseInt(document.getElementById('rows').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            const totalStudents = parseInt(document.getElementById('students').value);
+            const tallStudents = document.getElementById('tall').value.split(',').map(Number).filter(num => !isNaN(num));
+            const mediumStudents = document.getElementById('medium').value.split(',').map(Number).filter(num => !isNaN(num));
+            const shortStudents = document.getElementById('short').value.split(',').map(Number).filter(num => !isNaN(num));
+            const restrictions = document.getElementById('restrictions').value.split(',').map(pair => pair.trim().split('-').map(Number)).filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
+            const together = document.getElementById('together').value.split(',').map(pair => pair.trim().split('-').map(Number)).filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
+
+            if (totalStudents > rows * cols) {
+                alert('Total number of students exceed the classroom capacity.');
+                return;
+            }
+
+            if (tallStudents.length + mediumStudents.length + shortStudents.length !== totalStudents) {
+                alert('Number of students in height categories does not match total number of students.');
+                return;
+            }
+
+            for (const [together1, together2] of together) {
+                if (restrictions.some(([restricted1, restricted2]) =>
+                    (restricted1 === together1 && restricted2 === together2) ||
+                    (restricted1 === together2 && restricted2 === together1))) {
+                    alert('Input in “Separate Students” contradicts that in “Pair Up Students”.');
+                    return;
+                }
+            }
+
+            const plan = [];
+            let availableSeats = [];
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    availableSeats.push([i, j]);
+                }
+            }
+
+            const assignedSeats = {};
+            const shuffleArray = (array) => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            };
+
+            function assignStudent(student, height) {
+                const frontHalfRows = Math.ceil(rows / 2);
+                let attempts = availableSeats.length;
+                while (attempts > 0) {
+                    const randomIndex = Math.floor(Math.random() * availableSeats.length);
+                    const [row, col] = availableSeats[randomIndex];
+                    if ((height === 'tall' && row < frontHalfRows) || (height === 'short' && row >= frontHalfRows) || height === 'medium') {
+                        if (isSeatValid(student, row, col, assignedSeats, restrictions)) {
+                            assignedSeats[student] = [row, col];
+                            availableSeats.splice(randomIndex, 1);
+                            return true;
+                        }
+                    }
+                    attempts--;
+                }
+                return false;
+            }
+
+            function assignPair(student1, student2, height1, height2) {
+                const frontHalfRows = Math.ceil(rows / 2);
+                let attempts = availableSeats.length;
+                while (attempts > 0) {
+                    const randomIndex = Math.floor(Math.random() * availableSeats.length);
+                    const [row, col] = availableSeats[randomIndex];
+                    if (((height1 === 'tall' || height2 === 'tall') && row < frontHalfRows) || ((height1 === 'short' || height2 === 'short') && row >= frontHalfRows) || (height1 === 'medium' && height2 === 'medium')) {
+                        if (isSeatValid(student1, row, col, assignedSeats, restrictions)) {
+                            let col2 = (col % 2 === 0) ? col + 1 : col - 1;
+                            if (col2 >= 0 && col2 < cols) {
+                                if (isSeatValid(student2, row, col2, assignedSeats, restrictions)) {
+                                    assignedSeats[student1] = [row, col];
+                                    assignedSeats[student2] = [row, col2];
+                                    availableSeats = availableSeats.filter(seat => !(seat[0] === row && (seat[1] === col || seat[1] === col2)));
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    attempts--;
+                }
+                return false;
+            }
+
+            const studentsToAssign = shuffleArray([
+                ...tallStudents.map(s => [s, 'tall']),
+                ...mediumStudents.map(s => [s, 'medium']),
+                ...shortStudents.map(s => [s, 'short'])
+            ]);
+
+            for (const [student1, student2] of together) {
+                const height1 = tallStudents.includes(student1) ? 'tall' : mediumStudents.includes(student1) ? 'medium' : 'short';
+                const height2 = tallStudents.includes(student2) ? 'tall' : mediumStudents.includes(student2) ? 'medium' : 'short';
+                if (!assignPair(student1, student2, height1, height2)) {
+                    alert(`Unable to place the pair ${student1} and ${student2} with the given restrictions.`);
+                    return;
+                }
+            }
+
+            let allAssigned = true;
+            for (const [student, height] of studentsToAssign) {
+                if (!assignedSeats[student]) {
+                    if (!assignStudent(student, height)) {
+                        allAssigned = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!allAssigned) {
+                alert("Unable to place all students with the given restrictions. Try to press “Generate Seating Plan” again.");
+                return;
+            }
+
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                for (let j = 0; j < cols; j++) {
+                    row.push('<td></td>');
+                }
+                plan.push(row);
+            }
+
+            for (const student in assignedSeats) {
+                const [row, col] = assignedSeats[student];
+                let heightClass = '';
+                if (tallStudents.includes(parseInt(student))) {
+                    heightClass = 'tall';
+                } else if (mediumStudents.includes(parseInt(student))) {
+                    heightClass = 'medium';
+                } else {
+                    heightClass = 'short';
+                }
+                plan[row][col] = `<td class="${heightClass}">${student}</td>`;
+            }
+
+            const container = document.getElementById('container');
+            container.innerHTML = '';
+            const table = document.createElement('table');
+            plan.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => tr.innerHTML += cell);
+                table.appendChild(tr);
+            });
+            container.appendChild(table);
+
+            document.getElementById('blackboard').style.display = 'block';
+            document.getElementById('export-button').style.display = 'block'; // Show export button
+        }
+
+function exportToWord() {
+    const container = document.getElementById('container');
+    const tableHtml = container.innerHTML; // Get the table HTML
+    const blackboardContent = document.getElementById('blackboard').innerHTML; // Get the blackboard content
+
+    const instructions = `<p>Instructions:<br>
+                          1. To save any change: file -> save as -> set file format as .doc instead of .htm<br>
+                          2. To change the document orientation from portrait to landscape: layout -> orientation -> landscape<br>
+                          3. To insert a break between columns: right click -> insert -> columns to the left/right</p>`;
+
+    const header = `<html xmlns:w="urn:schemas-microsoft-com:office:word">
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Seating Plan</title>
+                        <style>
+                            table { border-collapse: collapse; width: 100%; }
+                            tr { height: 50px; }
+                            td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+                            .tall { background-color: #e6f2ff; }
+                            .medium { background-color: #ffffcc; }
+                            .short { background-color: #ffe6e6; }
+                            .blackboard { color: white; background-color: #4A604F; padding: 10px; margin-top: 20px; border-radius: 5px; text-align: center; }
+                            .blackboard-container { display: flex; justify-content: center; align-items: flex-end; margin-top: 20px; }
+                        </style>
+                    </head>
+                    <body>
+                        ${instructions}
+                        <table>${tableHtml}</table>
+                        <div class="blackboard-container">
+                            <div class="blackboard">${blackboardContent}</div> <!-- Include blackboard content aligned to the middle -->
+                        </div>
+                    </body>
+                  </html>`;
+
+    const blob = new Blob([header], {
+        type: 'application/msword'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Seating Plan.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+        function isSeatValid(student, row, col, assignedSeats, restrictions) {
+            for (const [restricted1, restricted2] of restrictions) {
+                if ((student === restricted1 && assignedSeats[restricted2] && areSeatsNear(row, col, assignedSeats[restricted2][0], assignedSeats[restricted2][1])) || 
+                    (student === restricted2 && assignedSeats[restricted1] && areSeatsNear(row, col, assignedSeats[restricted1][0], assignedSeats[restricted1][1]))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function areSeatsNear(row1, col1, row2, col2) {
+            const rowDiff = Math.abs(row1 - row2);
+            const colDiff = Math.abs(col1 - col2);
+            return (rowDiff <= 1 && colDiff <= 1);
+        }
+
+        function resetForm() {
+            document.getElementById('rows').value = 4;
+            document.getElementById('cols').value = 8;
+            document.getElementById('students').value = 32;
+            document.getElementById('tall').value = '';
+            document.getElementById('medium').value = '';
+            document.getElementById('short').value = '';
+            document.getElementById('restrictions').value = '';
+            document.getElementById('together').value = '';
+            document.getElementById('container').innerHTML = '';
+            document.getElementById('blackboard').style.display = 'none';
+            document.getElementById('export-button').style.display = 'none'; // Hide export button
+        }
+    </script>
+</body>
+</html>
