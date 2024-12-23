@@ -2,7 +2,7 @@ It's a seating plan generator that can assign a seat for every child according t
 
 There are more functions, such as separating students who should not sit around each other and pairing up those with a synergistic effect.
 
-<img width="1806" alt="Screenshot 2024-12-23 at 12 16 34" src="https://github.com/user-attachments/assets/b4c9faa5-e8dd-4df0-be9e-7843ede9634b" />
+<img width="1806" alt="Screenshot 2024-12-23 at 12 16 59" src="https://github.com/user-attachments/assets/63cb2152-a8f1-4028-a6fd-c0019ff01e17" />
 
 Besides, the seating plan generated can be exported as a Microsoft Word document.
 
